@@ -1,3 +1,22 @@
+<?php 
+ob_start();
+
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Verifica se as variáveis de sessão estão definidas
+if (!isset($_SESSION['loginUser'])) {
+    // Redireciona para a página inicial com a mensagem de acesso negado
+    header("Location: ../index.php?acao=negado");
+    exit;
+}
+
+// Inclui o script de saída
+include_once('sair.php');
+
+
+?>
 <!DOCTYPE html>
 <html lang="pt_br">
 <head>
@@ -5,8 +24,16 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>Agenda Eletrônica</title>
   <!-- DataTables -->
-  <link rel="stylesheet" href="../plugins/datatables-bs4/css/dataTables.bootstrap4.min.css">
-  <link rel="stylesheet" href="../plugins/datatables-responsive/css/responsive.bootstrap4.min.css">
+     <!-- Estilos Globais / Bootstrap (se houver) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- DataTables CSS Oficial v2.1.3 -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/2.1.3/css/dataTables.dataTables.css">
+    
+    <!-- DataTables Buttons CSS Oficial v3.1.1 -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.1.1/css/buttons.dataTables.css">
+</head>
+</head>
   <!-- Tell the browser to be responsive to screen width -->
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Font Awesome -->
@@ -31,6 +58,51 @@
   <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
   <link rel="stylesheet" href="../dist/css/estilo.css">
 </head>
+<?php
+// Inclui o arquivo de configuração de conexão com o banco de dados
+include_once('../config/conexao.php');
+
+// Obtém o email do usuário logado a partir da sessão
+$usuarioLogado = $_SESSION['loginUser'];
+
+// Define a consulta SQL para selecionar todos os campos do usuário com base no email
+$selectUser = "SELECT * FROM tb_user WHERE email_user=:emailUserLogado";
+
+try {
+    // Prepara a consulta SQL
+    $resultadoUser = $conect->prepare($selectUser);
+    
+    // Vincula o parâmetro :emailUserLogado ao valor da variável $usuarioLogado
+    $resultadoUser->bindParam(':emailUserLogado', $usuarioLogado, PDO::PARAM_STR);
+    
+    // Executa a consulta preparada
+    $resultadoUser->execute();
+
+    // Conta o número de linhas retornadas pela consulta
+    $contar = $resultadoUser->rowCount();
+    
+    // Se houver uma ou mais linhas retornadas
+    if ($contar > 0) {
+        // Obtém a próxima linha do conjunto de resultados como um objeto
+        $show = $resultadoUser->fetch(PDO::FETCH_OBJ);
+        
+        // Atribui os valores dos campos do usuário às variáveis PHP
+        $id_user = $show->id_user;
+        $foto_user = $show->foto_user;
+        $nome_user = $show->nome_user;
+        $email_user = $show->email_user;
+    } else {
+        // Exibe uma mensagem de aviso se não houver dados de perfil
+        echo '<div class="alert alert-danger"><strong>Aviso!</strong> Não há dados de perfil :(</div>';
+    }
+} catch (PDOException $e) {
+    // Registra a mensagem de erro no log do servidor em vez de exibi-la ao usuário
+    error_log("ERRO DE LOGIN DO PDO: " . $e->getMessage());
+    
+    // Exibe uma mensagem de erro genérica para o usuário
+    echo '<div class="alert alert-danger"><strong>Aviso!</strong> Ocorreu um erro ao tentar acessar os dados do perfil.</div>';
+}
+?>
 <body class="hold-transition sidebar-mini layout-fixed">
 <div class="wrapper">
   <!-- Navbar -->
@@ -80,7 +152,7 @@
   <!-- Main Sidebar Container -->
   <aside class="main-sidebar sidebar-dark-primary elevation-4">
     <!-- Brand Logo -->
-    <a href="index3.html" class="brand-link">
+    <a href="home.php" class="brand-link">
       <span class="brand-text font-weight-light">Agenda Eletrônica</span>
     </a>
 
